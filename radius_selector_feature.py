@@ -6,7 +6,6 @@ from PyQt4.QtGui import QAction, QIcon, QComboBox, QDoubleSpinBox
 
 # Initialize Qt resources from file resources.py
 # Import the code for the dialog
-from radius_selector_dialog import RadiusSelectorDialog
 from radius_selector_tool import RadiusSelector
 
 
@@ -39,8 +38,6 @@ class SelectByRadiusPlus:
             if qVersion() > '4.3.3':
                 QCoreApplication.installTranslator(self.translator)
 
-        # Create the dialog (after translation) and keep reference
-        self.dlg = RadiusSelectorDialog()
 
         # Declare instance attributes
         self.actions = []
@@ -165,7 +162,7 @@ class SelectByRadiusPlus:
 
         self.radiusSelectorFeatureMapTool = RadiusSelector(self.iface.mapCanvas(), self.distance_widget, self.distance_unit_widget, self.iface)
 
-        icon_path = os.path.join(self.plugin_dir, 'icon.png')
+        icon_path = os.path.join(self.plugin_dir, 'resources/icon.png')
         action = self.add_action(
             icon_path,
             text=self.tr(u'Select features in the active layer within a given radius.'),

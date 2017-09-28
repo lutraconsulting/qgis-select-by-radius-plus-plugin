@@ -1,5 +1,5 @@
 import math
-from qgis.core import QgsMapLayer, QgsGeometry, QgsSpatialIndex, QgsRectangle, QgsFeature, QgsPoint
+from qgis.core import QgsMapLayer, QgsGeometry, QgsSpatialIndex, QgsRectangle, QgsFeature, QgsPoint, QgsPointLocator
 from qgis.gui import QgsMapTool, QgsRubberBand
 
 from PyQt4.QtCore import Qt
@@ -27,7 +27,6 @@ class RadiusSelector(QgsMapTool):
             return
 
         if self.layer == None or self.iface.activeLayer() != self.layer:
-            print("update")
             self.layer = self.iface.activeLayer()
             self.allFeatures, self.index = self.spatialIndex()
 
@@ -43,7 +42,13 @@ class RadiusSelector(QgsMapTool):
 
         # Determine the location of the click in real-world coords
         layerPoint = self.toLayerCoordinates(self.layer, mouseEvent.pos())
-        self.showRubberBand(layerPoint, radius)
+
+        # apply snapping
+        snap_utils = self.canvas.snappingUtils()
+        matches = snap_utils.snapToCurrentLayer(mouseEvent.pos(), QgsPointLocator.All)
+        if matches.isValid():
+            point = matches.point()
+            layerPoint = self.toLayerCoordinates(self.layer, point)
 
         layerData = self.spatialIndexSearch(layerPoint, self.layer, radius, self.allFeatures, self.index)
         self.layer.removeSelection()
@@ -53,8 +58,8 @@ class RadiusSelector(QgsMapTool):
             return
 
         for singleInfo in layerData:
-            layerWithClosestFeature, closestFeatureId = singleInfo
-            layerWithClosestFeature.select(closestFeatureId)
+            selectedLayer, featureId = singleInfo
+            selectedLayer.select(featureId)
 
     def spatialIndex(self):
 
@@ -76,7 +81,7 @@ class RadiusSelector(QgsMapTool):
             feature = allFeatures[id]
             dist = feature.geometry().distance(QgsGeometry.fromPoint(layerPoint))
 
-            if dist < radius:
+            if dist <= radius:
                 data.append((layer, id))
 
         return data
