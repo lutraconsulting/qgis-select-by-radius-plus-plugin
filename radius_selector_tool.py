@@ -28,40 +28,39 @@ class RadiusSelector(QgsMapTool):
 
     def canvasReleaseEvent(self, mouseEvent):
 
+        layer = self.iface.activeLayer()
+        if layer == None:
+            # no selected layer
+            return
+
+        if layer.type() != QgsMapLayer.VectorLayer:
+            # Ignore this layer as it's not a vector
+            return
+
+        if layer.featureCount() == 0:
+            # There are no features - skip
+            return
+
         layerData = []
         radius = self.radius_field.value()
 
-        for layer in self.canvas.layers():
+        # Determine the location of the click in real-world coords
+        layerPoint = self.toLayerCoordinates(layer, mouseEvent.pos())
 
-            # TODO if is_selected
-            if self.iface.activeLayer() != layer:
-               continue
+        # Loop through all features in the layer
+        for f in layer.getFeatures():
+            dist = f.geometry().distance(QgsGeometry.fromPoint(layerPoint))
 
-            if layer.type() != QgsMapLayer.VectorLayer:
-                # Ignore this layer as it's not a vector
-                continue
+            if (self.dist_unit.currentText() == 'miles'):
+                radius = self.miles_to_meters(radius)
+            elif (self.dist_unit.currentText() == 'km'):
+                radius = self.kilometers_to_miles(radius)
 
-            if layer.featureCount() == 0:
-                # There are no features - skip
-                continue
+            if dist <= radius:
+                info = (layer, f.id())
+                layerData.append(info)
 
-            # Determine the location of the click in real-world coords
-            layerPoint = self.toLayerCoordinates(layer, mouseEvent.pos())
-
-            # Loop through all features in the layer
-            for f in layer.getFeatures():
-                dist = f.geometry().distance(QgsGeometry.fromPoint(layerPoint))
-
-                if (self.dist_unit.currentText() == 'miles'):
-                    radius = self.miles_to_meters(radius)
-                elif (self.dist_unit.currentText() == 'km'):
-                    radius = self.kilometers_to_miles(radius)
-
-                if dist <= radius:
-                    info = (layer, f.id())
-                    layerData.append(info)
-
-            layer.removeSelection()
+        layer.removeSelection()
 
         if not len(layerData) > 0:
             # Looks like no vector layers were found - do nothing

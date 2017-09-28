@@ -2,7 +2,7 @@
 import os.path
 
 from PyQt4.QtCore import QSettings, QTranslator, qVersion, QCoreApplication
-from PyQt4.QtGui import QAction, QIcon
+from PyQt4.QtGui import QAction, QIcon, QComboBox, QDoubleSpinBox
 
 # Initialize Qt resources from file resources.py
 # Import the code for the dialog
@@ -48,6 +48,8 @@ class SelectByRadiusPlus:
         # TODO: We are going to let the user set this up in a future iteration
         self.toolbar = self.iface.addToolBar(u'SelectByRadiusPlus')
         self.toolbar.setObjectName(u'SelectByRadiusPlus')
+
+        self.distance_units = ["m", "km", "miles"]
 
     # noinspection PyMethodMayBeStatic
     def tr(self, message):
@@ -138,12 +140,32 @@ class SelectByRadiusPlus:
 
         return action
 
+    def initDistanceWidget(self):
+        widget = QDoubleSpinBox()
+        widget.setMaximum(9999999.999999)
+        widget.setDecimals(3)
+
+        return widget
+
+    def initUnitWidget(self):
+        widget = QComboBox()
+        for unit in self.distance_units:
+            widget.addItem(unit)
+
+        return widget
+
     def initGui(self):
         """Create the menu entries and toolbar icons inside the QGIS GUI."""
 
-        icon_path = ':/plugins/SelectByRadiusPlus/icon.png'
+
         # Create a new NearestFeatureMapTool and keep reference
-        self.radiusSelectorFeatureMapTool = RadiusSelector(self.iface.mapCanvas(), self.dlg.radius_field, self.dlg.dist_unit, self.iface)
+
+        self.distance_unit_widget = self.initUnitWidget()
+        self.distance_widget = self.initDistanceWidget()
+
+        self.radiusSelectorFeatureMapTool = RadiusSelector(self.iface.mapCanvas(), self.distance_widget, self.distance_unit_widget, self.iface)
+
+        icon_path = os.path.join(self.plugin_dir, 'icon.png')
         action = self.add_action(
             icon_path,
             text=self.tr(u'Select all features in selected layer withing given radius.'),
@@ -152,6 +174,10 @@ class SelectByRadiusPlus:
 
         action.setCheckable(True)
         self.radiusSelectorFeatureMapTool.setAction(action)
+
+        self.toolbar.addWidget(self.distance_unit_widget)
+        self.toolbar.addWidget(self.distance_widget)
+
 
 
     def unload(self):
@@ -167,8 +193,4 @@ class SelectByRadiusPlus:
 
 
     def run(self):
-        self.dlg.show()
-        result = self.dlg.exec_()
-
-        if (result):
-            self.iface.mapCanvas().setMapTool(self.radiusSelectorFeatureMapTool)
+        self.iface.mapCanvas().setMapTool(self.radiusSelectorFeatureMapTool)
