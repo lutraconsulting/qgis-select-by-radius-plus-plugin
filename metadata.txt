@@ -8,11 +8,13 @@
 
 [general]
 name=Select by radius plus
-qgisMinimumVersion=2.0
+qgisMinimumVersion=2.8
+qgisMaximumVersion=2.99
 description=Selects all features from selected layer within given radius.
 version=0.1
 author=Viktor Sklencar for Lutra Consulting
 email=info@lutraconsulting.co.uk
+about=A simple selection tool similar to Select By Radius, but with this plugin, user can set the exact radius by inserting the number in various untis. It also works with snapping.
 
 # End of mandatory metadata
 
@@ -22,14 +24,14 @@ email=info@lutraconsulting.co.uk
 # changelog=
 
 # Tags are comma separated with spaces allowed
-tags=
+tags=select, radius, numeric, circle
 
-homepage=
-tracker=
-repository=
-icon=icon.png
+homepage=https://github.com/lutraconsulting/qgis-select-by-radius-plus-plugin
+tracker=https://github.com/lutraconsulting/qgis-select-by-radius-plus-plugin/issues
+repository=https://github.com/lutraconsulting/qgis-select-by-radius-plus-plugin
+icon=resources/icon.png
 # experimental flag
-experimental=True
+experimental=Flase
 
 # deprecated flag (applies to the whole plugin, not just a single version)
 deprecated=False
