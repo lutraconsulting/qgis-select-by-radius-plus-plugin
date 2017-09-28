@@ -1,8 +1,9 @@
-from qgis.core import QgsMapLayer, QgsGeometry
-from qgis.gui import QgsMapTool
+import math
+from qgis.core import QgsMapLayer, QgsGeometry, QgsSpatialIndex, QgsRectangle, QgsFeature, QgsPoint
+from qgis.gui import QgsMapTool, QgsRubberBand
 
 from PyQt4.QtCore import Qt
-from PyQt4.QtGui import QCursor
+from PyQt4.QtGui import QCursor, QColor
 
 
 class RadiusSelector(QgsMapTool):
@@ -15,52 +16,37 @@ class RadiusSelector(QgsMapTool):
         self.dist_unit = dist_unit_field
         self.cursor = QCursor(Qt.CrossCursor)
         self.iface = iface
-
-
-    def miles_to_meters(self, dist):
-        return dist * 1609.344
-
-    def kilometers_to_miles(self, dist):
-        return dist * 1000
-        
-    def activate(self):
-        self.canvas.setCursor(self.cursor)
+        self.layer = None
+        self.index = None
+        self.allFeatures = []
+        self.rubberBand = None
 
     def canvasReleaseEvent(self, mouseEvent):
 
-        layer = self.iface.activeLayer()
-        if layer == None:
-            # no selected layer
+        if self.iface.activeLayer() == None:
             return
 
-        if layer.type() != QgsMapLayer.VectorLayer:
+        if self.layer == None or self.iface.activeLayer() != self.layer:
+            print("update")
+            self.layer = self.iface.activeLayer()
+            self.allFeatures, self.index = self.spatialIndex()
+
+        if self.layer.type() != QgsMapLayer.VectorLayer:
             # Ignore this layer as it's not a vector
             return
 
-        if layer.featureCount() == 0:
+        if self.layer.featureCount() == 0:
             # There are no features - skip
             return
 
-        layerData = []
-        radius = self.radius_field.value()
+        radius = self.getRadius()
 
         # Determine the location of the click in real-world coords
-        layerPoint = self.toLayerCoordinates(layer, mouseEvent.pos())
+        layerPoint = self.toLayerCoordinates(self.layer, mouseEvent.pos())
+        self.showRubberBand(layerPoint, radius)
 
-        # Loop through all features in the layer
-        for f in layer.getFeatures():
-            dist = f.geometry().distance(QgsGeometry.fromPoint(layerPoint))
-
-            if (self.dist_unit.currentText() == 'miles'):
-                radius = self.miles_to_meters(radius)
-            elif (self.dist_unit.currentText() == 'km'):
-                radius = self.kilometers_to_miles(radius)
-
-            if dist <= radius:
-                info = (layer, f.id())
-                layerData.append(info)
-
-        layer.removeSelection()
+        layerData = self.spatialIndexSearch(layerPoint, self.layer, radius, self.allFeatures, self.index)
+        self.layer.removeSelection()
 
         if not len(layerData) > 0:
             # Looks like no vector layers were found - do nothing
@@ -69,5 +55,63 @@ class RadiusSelector(QgsMapTool):
         for singleInfo in layerData:
             layerWithClosestFeature, closestFeatureId = singleInfo
             layerWithClosestFeature.select(closestFeatureId)
+
+    def spatialIndex(self):
+
+        allfeatures = {}
+        index = QgsSpatialIndex()
+        for feature in self.layer.getFeatures():
+            feat_copy = QgsFeature(feature)
+            allfeatures[feature.id()] = feat_copy
+            index.insertFeature(feat_copy)
+        return allfeatures, index
+
+
+    def spatialIndexSearch(self, layerPoint, layer, radius, allFeatures, index):
+        data = []
+
+        ids = index.intersects(QgsRectangle(layerPoint.x() - (radius), layerPoint.y() - (radius),layerPoint.x() + (radius), layerPoint.y() + (radius) ))
+
+        for id in ids:
+            feature = allFeatures[id]
+            dist = feature.geometry().distance(QgsGeometry.fromPoint(layerPoint))
+
+            if dist < radius:
+                data.append((layer, id))
+
+        return data
+
+    def miles_to_meters(self, dist):
+        return dist * 1609.344
+
+    def kilometers_to_miles(self, dist):
+        return dist * 1000
+
+    def activate(self):
+        self.canvas.setCursor(self.cursor)
+
+    def getRadius(self):
+        radius = self.radius_field.value()
+        if (self.dist_unit.currentText() == 'miles'):
+            radius = self.miles_to_meters(radius)
+        elif (self.dist_unit.currentText() == 'km'):
+            radius = self.kilometers_to_miles(radius)
+
+        return radius
+
+    def showRubberBand(self, point, radius):
+        if self.rubberBand != None:
+            self.rubberBand.reset(True)
+
+        segments = 360
+        points = []
+        for t in [(2 * math.pi) / segments * i for i in range(segments)]:
+            points.append((radius * math.cos(t), radius * math.sin(t)))
+        polygon = [QgsPoint(i[0] + point.x(), i[1] + point.y()) for i in points]
+        self.rubberBand = QgsRubberBand(self.canvas, True)
+        self.rubberBand.setColor(QColor(255, 0, 0, (0.2) * 255))
+        self.rubberBand.setWidth(1)
+
+        self.rubberBand.setToGeometry(QgsGeometry.fromPolygon([polygon]), None)
 
 
