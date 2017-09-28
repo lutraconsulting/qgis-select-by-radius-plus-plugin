@@ -1,6 +1,6 @@
 # Select By Radius +
 
-![icon.png](icon.png)
+![icon](https://github.com/lutraconsulting/qgis-select-by-radius-plus-plugin/blob/master/resources/icon.svg)
 
 This plugin extends the capability of the current selection tool by radius.
 
