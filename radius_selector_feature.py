@@ -168,7 +168,7 @@ class SelectByRadiusPlus:
         icon_path = os.path.join(self.plugin_dir, 'icon.png')
         action = self.add_action(
             icon_path,
-            text=self.tr(u'Select all features in selected layer withing given radius.'),
+            text=self.tr(u'Select features in the active layer within a given radius.'),
             callback=self.run,
             parent=self.iface.mainWindow())
 
