@@ -1,8 +1,7 @@
-
 import os.path
 
 from PyQt4.QtCore import QSettings, QTranslator, qVersion, QCoreApplication
-from PyQt4.QtGui import QAction, QIcon, QComboBox, QDoubleSpinBox
+from PyQt4.QtGui import QAction, QIcon, QComboBox, QDoubleSpinBox, QCheckBox
 
 # Initialize Qt resources from file resources.py
 # Import the code for the dialog
@@ -38,7 +37,6 @@ class SelectByRadiusPlus:
             if qVersion() > '4.3.3':
                 QCoreApplication.installTranslator(self.translator)
 
-
         # Declare instance attributes
         self.actions = []
         self.menu = self.tr(u'&Select by radius plus')
@@ -63,18 +61,17 @@ class SelectByRadiusPlus:
         # noinspection PyTypeChecker,PyArgumentList,PyCallByClass
         return QCoreApplication.translate('SelectByRadiusPlus', message)
 
-
     def add_action(
-        self,
-        icon_path,
-        text,
-        callback,
-        enabled_flag=True,
-        add_to_menu=True,
-        add_to_toolbar=True,
-        status_tip=None,
-        whats_this=None,
-        parent=None):
+            self,
+            icon_path,
+            text,
+            callback,
+            enabled_flag=True,
+            add_to_menu=True,
+            add_to_toolbar=True,
+            status_tip=None,
+            whats_this=None,
+            parent=None):
         """Add a toolbar icon to the InaSAFE toolbar.
 
         :param icon_path: Path to the icon for this action. Can be a resource
@@ -139,7 +136,7 @@ class SelectByRadiusPlus:
 
     def initDistanceWidget(self):
         widget = QDoubleSpinBox()
-        widget.setMaximum(9999999.999999)
+        widget.setMaximum(9999999.999)
         widget.setDecimals(3)
 
         return widget
@@ -151,16 +148,20 @@ class SelectByRadiusPlus:
 
         return widget
 
+    def initCheckbox(self):
+        widget = QCheckBox("Use centroid")
+        widget.setToolTip("If it's checked, a feature is selected if its centroid is in radius.")
+
+        return widget
+
     def initGui(self):
-        """Create the menu entries and toolbar icons inside the QGIS GUI."""
-
-
-        # Create a new NearestFeatureMapTool and keep reference
-
         self.distance_unit_widget = self.initUnitWidget()
         self.distance_widget = self.initDistanceWidget()
+        self.use_centroid_checkbox = self.initCheckbox()
 
-        self.radiusSelectorFeatureMapTool = RadiusSelector(self.iface.mapCanvas(), self.distance_widget, self.distance_unit_widget, self.iface)
+        self.radiusSelectorFeatureMapTool = RadiusSelector(self.iface.mapCanvas(), self.distance_widget,
+                                                           self.distance_unit_widget, self.use_centroid_checkbox,
+                                                           self.iface)
 
         icon_path = os.path.join(self.plugin_dir, 'resources/icon.png')
         action = self.add_action(
@@ -172,10 +173,9 @@ class SelectByRadiusPlus:
         action.setCheckable(True)
         self.radiusSelectorFeatureMapTool.setAction(action)
 
-        self.toolbar.addWidget(self.distance_unit_widget)
         self.toolbar.addWidget(self.distance_widget)
-
-
+        self.toolbar.addWidget(self.distance_unit_widget)
+        self.toolbar.addWidget(self.use_centroid_checkbox)
 
     def unload(self):
         """Removes the plugin menu item and icon from QGIS GUI."""
@@ -187,7 +187,6 @@ class SelectByRadiusPlus:
 
         # Unset the map tool in case it's set
         self.iface.mapCanvas().unsetMapTool(self.radiusSelectorFeatureMapTool)
-
 
     def run(self):
         self.iface.mapCanvas().setMapTool(self.radiusSelectorFeatureMapTool)

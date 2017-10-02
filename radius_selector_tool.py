@@ -7,9 +7,8 @@ from PyQt4.QtGui import QCursor, QColor
 
 
 class RadiusSelector(QgsMapTool):
-    
-    def __init__(self, canvas, radius_field, dist_unit_field, iface):
-        
+    def __init__(self, canvas, radius_field, dist_unit_field, use_centroid_field, iface):
+
         super(QgsMapTool, self).__init__(canvas)
         self.canvas = canvas
         self.radius_field = radius_field
@@ -20,6 +19,7 @@ class RadiusSelector(QgsMapTool):
         self.index = None
         self.allFeatures = []
         self.rubberBand = None
+        self.use_centroid_field = use_centroid_field
 
     def canvasReleaseEvent(self, mouseEvent):
 
@@ -50,7 +50,8 @@ class RadiusSelector(QgsMapTool):
             point = matches.point()
             layerPoint = self.toLayerCoordinates(self.layer, point)
 
-        layerData = self.spatialIndexSearch(layerPoint, self.layer, radius, self.allFeatures, self.index)
+        layerData = self.spatialIndexSearch(layerPoint, self.layer, radius, self.allFeatures, self.index,
+                                            self.use_centroid_field.isChecked())
         self.layer.removeSelection()
 
         if not len(layerData) > 0:
@@ -71,15 +72,20 @@ class RadiusSelector(QgsMapTool):
             index.insertFeature(feat_copy)
         return allfeatures, index
 
-
-    def spatialIndexSearch(self, layerPoint, layer, radius, allFeatures, index):
+    def spatialIndexSearch(self, layerPoint, layer, radius, allFeatures, index, use_centroid):
         data = []
 
-        ids = index.intersects(QgsRectangle(layerPoint.x() - (radius), layerPoint.y() - (radius),layerPoint.x() + (radius), layerPoint.y() + (radius) ))
+        ids = index.intersects(
+            QgsRectangle(layerPoint.x() - (radius), layerPoint.y() - (radius), layerPoint.x() + (radius),
+                         layerPoint.y() + (radius)))
 
         for id in ids:
             feature = allFeatures[id]
-            dist = feature.geometry().distance(QgsGeometry.fromPoint(layerPoint))
+            dist = 0
+            if use_centroid:
+                dist = feature.geometry().centroid().distance(QgsGeometry.fromPoint(layerPoint))
+            else:
+                dist = feature.geometry().distance(QgsGeometry.fromPoint(layerPoint))
 
             if dist <= radius:
                 data.append((layer, id))
@@ -118,5 +124,3 @@ class RadiusSelector(QgsMapTool):
         self.rubberBand.setWidth(1)
 
         self.rubberBand.setToGeometry(QgsGeometry.fromPolygon([polygon]), None)
-
-
