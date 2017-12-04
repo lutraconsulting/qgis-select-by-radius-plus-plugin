@@ -1,13 +1,13 @@
 import math
 from qgis.core import QgsMapLayer, QgsGeometry, QgsSpatialIndex, QgsRectangle, QgsFeature, QgsPoint, QgsPointLocator
-from qgis.gui import QgsMapTool, QgsRubberBand
+from qgis.gui import QgsMapTool, QgsRubberBand, QgsMessageBar
 
 from PyQt4.QtCore import Qt
 from PyQt4.QtGui import QCursor, QColor, QApplication
 
 
 class RadiusSelector(QgsMapTool):
-    def __init__(self, canvas, radius_field, dist_unit_field, iface):
+    def __init__(self, canvas, radius_field, dist_unit_field, use_centroid_field, iface):
 
         super(QgsMapTool, self).__init__(canvas)
         self.canvas = canvas
@@ -20,10 +20,13 @@ class RadiusSelector(QgsMapTool):
         self.allFeatures = []
         self.rubberBand = None
         self.prev_tool = None
+        self.use_centroid_field = use_centroid_field
+
 
     def canvasReleaseEvent(self, mouseEvent):
-        print('canvasReleaseEvent')
+
         if self.iface.activeLayer() is None:
+            self.iface.messageBar().pushMessage("Warning", "There is no active layer", level=QgsMessageBar.WARNING, duration=3)
             return
 
         if self.iface.activeLayer() == QgsMapLayer.RasterLayer:
@@ -50,10 +53,8 @@ class RadiusSelector(QgsMapTool):
             point = matches.point()
             layerPoint = self.toLayerCoordinates(self.layer, point)
 
-        # TODO @vsklencar delete rubberband
-        # self.showRubberBand(layerPoint, radius)
-
-        layerData = self.spatialIndexSearch(layerPoint, self.layer, radius, self.allFeatures, self.index)
+        layerData = self.spatialIndexSearch(layerPoint, self.layer, radius, self.allFeatures, self.index,
+                                            self.use_centroid_field.isChecked())
         self.layer.removeSelection()
 
         if not len(layerData) > 0:
@@ -82,17 +83,22 @@ class RadiusSelector(QgsMapTool):
             index.insertFeature(feat_copy)
         return allfeatures, index
 
-    def spatialIndexSearch(self, layerPoint, layer, radius, allFeatures, index):
+    def spatialIndexSearch(self, layerPoint, layer, radius, allFeatures, index, use_centroid):
         data = []
-
+        print(radius)
         ids = index.intersects(
             QgsRectangle(layerPoint.x() - (radius), layerPoint.y() - (radius), layerPoint.x() + (radius),
                          layerPoint.y() + (radius)))
 
         for id in ids:
             feature = allFeatures[id]
-            dist = feature.geometry().distance(QgsGeometry.fromPoint(layerPoint))
+            dist = 0
+            if use_centroid:
+                dist = feature.geometry().centroid().distance(QgsGeometry.fromPoint(layerPoint))
+            else:
+                dist = feature.geometry().distance(QgsGeometry.fromPoint(layerPoint))
 
+            print(dist)
             if dist <= radius:
                 data.append((layer, id))
 
