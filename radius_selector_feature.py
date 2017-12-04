@@ -7,6 +7,8 @@ from PyQt4.QtGui import QAction, QIcon, QComboBox, QDoubleSpinBox
 # Initialize Qt resources from file resources.py
 # Import the code for the dialog
 from radius_selector_tool import RadiusSelector
+from processing.core.Processing import Processing
+from processing_tools.radius_selector_provider import RadiusSelectorProvider
 
 
 class SelectByRadiusPlus:
@@ -42,7 +44,6 @@ class SelectByRadiusPlus:
         # Declare instance attributes
         self.actions = []
         self.menu = self.tr(u'&Select by radius plus')
-        # TODO: We are going to let the user set this up in a future iteration
         self.toolbar = self.iface.addToolBar(u'SelectByRadiusPlus')
         self.toolbar.setObjectName(u'SelectByRadiusPlus')
 
@@ -139,7 +140,7 @@ class SelectByRadiusPlus:
 
     def initDistanceWidget(self):
         widget = QDoubleSpinBox()
-        widget.setMaximum(9999999.999999)
+        widget.setMaximum(9999999.999)
         widget.setDecimals(3)
 
         return widget
@@ -153,7 +154,6 @@ class SelectByRadiusPlus:
 
     def initGui(self):
         """Create the menu entries and toolbar icons inside the QGIS GUI."""
-
 
         # Create a new NearestFeatureMapTool and keep reference
 
@@ -172,8 +172,13 @@ class SelectByRadiusPlus:
         action.setCheckable(True)
         self.radiusSelectorFeatureMapTool.setAction(action)
 
-        self.toolbar.addWidget(self.distance_unit_widget)
         self.toolbar.addWidget(self.distance_widget)
+        self.toolbar.addWidget(self.distance_unit_widget)
+
+        Processing.initialize()
+
+        self.processing_provider = RadiusSelectorProvider()
+        Processing.addProvider(self.processing_provider, updateList=True)
 
 
 
@@ -190,4 +195,6 @@ class SelectByRadiusPlus:
 
 
     def run(self):
+        print('run')
+        self.radiusSelectorFeatureMapTool.prev_tool = self.iface.mapCanvas().mapTool()
         self.iface.mapCanvas().setMapTool(self.radiusSelectorFeatureMapTool)

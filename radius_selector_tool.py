@@ -3,13 +3,12 @@ from qgis.core import QgsMapLayer, QgsGeometry, QgsSpatialIndex, QgsRectangle, Q
 from qgis.gui import QgsMapTool, QgsRubberBand
 
 from PyQt4.QtCore import Qt
-from PyQt4.QtGui import QCursor, QColor
+from PyQt4.QtGui import QCursor, QColor, QApplication
 
 
 class RadiusSelector(QgsMapTool):
-    
     def __init__(self, canvas, radius_field, dist_unit_field, iface):
-        
+
         super(QgsMapTool, self).__init__(canvas)
         self.canvas = canvas
         self.radius_field = radius_field
@@ -20,24 +19,25 @@ class RadiusSelector(QgsMapTool):
         self.index = None
         self.allFeatures = []
         self.rubberBand = None
+        self.prev_tool = None
 
     def canvasReleaseEvent(self, mouseEvent):
-
-        if self.iface.activeLayer() == None:
+        print('canvasReleaseEvent')
+        if self.iface.activeLayer() is None:
             return
 
+        if self.iface.activeLayer() == QgsMapLayer.RasterLayer:
+            return
+
+        if self.iface.activeLayer().featureCount() == 0:
+            return
+
+        QApplication.setOverrideCursor(Qt.WaitCursor)
         if self.layer == None or self.iface.activeLayer() != self.layer:
             self.layer = self.iface.activeLayer()
             self.allFeatures, self.index = self.spatialIndex()
 
-        if self.layer.type() != QgsMapLayer.VectorLayer:
-            # Ignore this layer as it's not a vector
-            return
-
-        if self.layer.featureCount() == 0:
-            # There are no features - skip
-            return
-
+        # TODO @vsklencar onChange radius
         radius = self.getRadius()
 
         # Determine the location of the click in real-world coords
@@ -50,16 +50,27 @@ class RadiusSelector(QgsMapTool):
             point = matches.point()
             layerPoint = self.toLayerCoordinates(self.layer, point)
 
+        # TODO @vsklencar delete rubberband
+        # self.showRubberBand(layerPoint, radius)
+
         layerData = self.spatialIndexSearch(layerPoint, self.layer, radius, self.allFeatures, self.index)
         self.layer.removeSelection()
 
         if not len(layerData) > 0:
             # Looks like no vector layers were found - do nothing
+            QApplication.restoreOverrideCursor()
             return
 
         for singleInfo in layerData:
             selectedLayer, featureId = singleInfo
             selectedLayer.select(featureId)
+        if self.prev_tool:
+            self.iface.mapCanvas().setMapTool(self.prev_tool)
+        else:
+            self.iface.mapCanvas().unsetMapTool(self)
+
+
+        QApplication.restoreOverrideCursor()
 
     def spatialIndex(self):
 
@@ -71,11 +82,12 @@ class RadiusSelector(QgsMapTool):
             index.insertFeature(feat_copy)
         return allfeatures, index
 
-
     def spatialIndexSearch(self, layerPoint, layer, radius, allFeatures, index):
         data = []
 
-        ids = index.intersects(QgsRectangle(layerPoint.x() - (radius), layerPoint.y() - (radius),layerPoint.x() + (radius), layerPoint.y() + (radius) ))
+        ids = index.intersects(
+            QgsRectangle(layerPoint.x() - (radius), layerPoint.y() - (radius), layerPoint.x() + (radius),
+                         layerPoint.y() + (radius)))
 
         for id in ids:
             feature = allFeatures[id]
@@ -118,5 +130,3 @@ class RadiusSelector(QgsMapTool):
         self.rubberBand.setWidth(1)
 
         self.rubberBand.setToGeometry(QgsGeometry.fromPolygon([polygon]), None)
-
-
