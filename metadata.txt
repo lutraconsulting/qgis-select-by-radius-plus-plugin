@@ -8,8 +8,8 @@
 
 [general]
 name=Select by radius plus
-qgisMinimumVersion=2.8
-qgisMaximumVersion=2.99
+qgisMinimumVersion=3.4
+qgisMaximumVersion=3.99
 description=Selects all features from selected layer within given radius.
 version=0.3
 author=Viktor Sklencar for Lutra Consulting
@@ -31,7 +31,7 @@ tracker=https://github.com/lutraconsulting/qgis-select-by-radius-plus-plugin/iss
 repository=https://github.com/lutraconsulting/qgis-select-by-radius-plus-plugin
 icon=resources/icon.png
 # experimental flag
-experimental=Flase
+experimental=False
 
 # deprecated flag (applies to the whole plugin, not just a single version)
 deprecated=False

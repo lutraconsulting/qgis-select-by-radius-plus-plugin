@@ -1,9 +1,10 @@
 import math
-from qgis.core import QgsMapLayer, QgsGeometry, QgsSpatialIndex, QgsRectangle, QgsFeature, QgsPoint, QgsPointLocator
-from qgis.gui import QgsMapTool, QgsRubberBand, QgsMessageBar
+from qgis.core import QgsMapLayer, QgsGeometry, QgsSpatialIndex, QgsRectangle, QgsFeature, QgsPoint, QgsPointLocator, Qgis
+from qgis.gui import QgsMapTool, QgsRubberBand
 
-from PyQt4.QtCore import Qt
-from PyQt4.QtGui import QCursor, QColor, QApplication
+from qgis.PyQt.QtCore import Qt
+from qgis.PyQt.QtGui import QCursor, QColor
+from qgis.PyQt.QtWidgets import QApplication
 
 
 class RadiusSelector(QgsMapTool):
@@ -26,7 +27,7 @@ class RadiusSelector(QgsMapTool):
     def canvasReleaseEvent(self, mouseEvent):
 
         if self.iface.activeLayer() is None:
-            self.iface.messageBar().pushMessage("Warning", "There is no active layer", level=QgsMessageBar.WARNING, duration=3)
+            self.iface.messageBar().pushMessage("Warning", "There is no active layer.", level=Qgis.Warning, duration=3)
             return
 
         if self.iface.activeLayer() == QgsMapLayer.RasterLayer:
@@ -94,9 +95,9 @@ class RadiusSelector(QgsMapTool):
             feature = allFeatures[id]
             dist = 0
             if use_centroid:
-                dist = feature.geometry().centroid().distance(QgsGeometry.fromPoint(layerPoint))
+                dist = feature.geometry().centroid().distance(QgsGeometry.fromPointXY(point=layerPoint))
             else:
-                dist = feature.geometry().distance(QgsGeometry.fromPoint(layerPoint))
+                dist = feature.geometry().distance(QgsGeometry.fromPointXY(point=layerPoint))
 
             print(dist)
             if dist <= radius:
@@ -115,9 +116,9 @@ class RadiusSelector(QgsMapTool):
 
     def getRadius(self):
         radius = self.radius_field.value()
-        if (self.dist_unit.currentText() == 'miles'):
+        if self.dist_unit.currentText() == 'miles':
             radius = self.miles_to_meters(radius)
-        elif (self.dist_unit.currentText() == 'km'):
+        elif self.dist_unit.currentText() == 'km':
             radius = self.kilometers_to_miles(radius)
 
         return radius
@@ -132,7 +133,7 @@ class RadiusSelector(QgsMapTool):
             points.append((radius * math.cos(t), radius * math.sin(t)))
         polygon = [QgsPoint(i[0] + point.x(), i[1] + point.y()) for i in points]
         self.rubberBand = QgsRubberBand(self.canvas, True)
-        self.rubberBand.setColor(QColor(255, 0, 0, (0.2) * 255))
+        self.rubberBand.setColor(QColor(255, 0, 0, 51))
         self.rubberBand.setWidth(1)
 
-        self.rubberBand.setToGeometry(QgsGeometry.fromPolygon([polygon]), None)
+        self.rubberBand.setToGeometry(QgsGeometry.fromPolygonXY(polygon=[polygon]), None)

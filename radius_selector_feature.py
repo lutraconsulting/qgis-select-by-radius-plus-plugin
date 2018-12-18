@@ -1,14 +1,15 @@
 import os.path
 
-from PyQt4.QtCore import QSettings, QTranslator, qVersion, QCoreApplication
-from PyQt4.QtGui import QAction, QIcon, QComboBox, QDoubleSpinBox, QCheckBox
+from qgis.PyQt.QtCore import QCoreApplication
+from qgis.PyQt.QtWidgets import QAction, QComboBox, QDoubleSpinBox, QCheckBox
+from qgis.PyQt.QtGui import QIcon
 
 # Initialize Qt resources from file resources.py
 # Import the code for the dialog
-from radius_selector_tool import RadiusSelector
+from .radius_selector_tool import RadiusSelector
 
 
-class SelectByRadiusPlus:
+class SelectByRadiusPlus(object):
     """QGIS Plugin Implementation."""
 
     def __init__(self, iface):
@@ -23,19 +24,6 @@ class SelectByRadiusPlus:
         self.iface = iface
         # initialize plugin directory
         self.plugin_dir = os.path.dirname(__file__)
-        # initialize locale
-        locale = QSettings().value('locale/userLocale')[0:2]
-        locale_path = os.path.join(
-            self.plugin_dir,
-            'i18n',
-            'SelectByRadiusPlus{}.qm'.format(locale))
-
-        if os.path.exists(locale_path):
-            self.translator = QTranslator()
-            self.translator.load(locale_path)
-
-            if qVersion() > '4.3.3':
-                QCoreApplication.installTranslator(self.translator)
 
         # Declare instance attributes
         self.actions = []
